@@ -11,7 +11,7 @@ using namespace CompilerKit;
 // Define a subclass
 class PALScanner : public Scanner {
 public:
-	std::string keywords[9] = { "begin", "end", "for", "int", "real", "let", "to", "do"};
+	std::string keywords[16] = { "PROGRAM", "WITH", "IN", "END", "AS", "INTEGER", "REAL", "UNTIL","REPEAT","ENDLOOP","IF","THEN","ELSE","ENDIF","INPUT","OUTPUT"};
 
 	enum class State {
 		Start = 0,
@@ -57,7 +57,7 @@ public:
 				}
 				else {
 					std::string str = buf.str();
-					for (size_t i = 0; i < 9; i++)
+					for (size_t i = 0; i < 16; i++)
 					{
 						if (str == keywords[i]) {
 							return makeToken(str);
