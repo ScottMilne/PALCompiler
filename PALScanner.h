@@ -18,9 +18,7 @@ public:
 		Identifier = 1,
 		Integer = 2,
 		Real = 3,
-		Colon = 4,
-		Equals = 5,
-		Punct = 6,
+		Punct = 4,
 		EndOfFile = 98,
 		InvalidChar = 99,
 	};
@@ -42,12 +40,11 @@ public:
 				}
 				else {
 					updateTokenStart();
-					if (std::isalpha(peek()))			state = State::Identifier;
-					else if (std::isdigit(peek()))		state = State::Integer;
-					else if (peek() == ':')				state = State::Colon;
-					else if (strchr("+-*/(),", peek())) state = State::Punct;
-					else if (peek() == '\0')			state = State::EndOfFile;
-					else								state = State::InvalidChar;
+					if (std::isalpha(peek()))				state = State::Identifier;
+					else if (std::isdigit(peek()))			state = State::Integer;
+					else if (strchr("+-*/(),=<>", peek()))	state = State::Punct;
+					else if (peek() == '\0')				state = State::EndOfFile;
+					else									state = State::InvalidChar;
 				}
 				break;
 
@@ -72,22 +69,14 @@ public:
 				if (std::isdigit(peek())) {
 					state = State::Integer;
 				}
+				else if (peek() == '.')
+				{
+					state = State::Real;
+				}
 				else {
 					return makeToken(Token::Integer, buf.str());
 				}
 				break;
-
-			case State::Colon:
-				if (peek() == '=') {
-					state = State::Equals;
-				}
-				else {
-					return makeToken(Token::InvalidToken, buf.str());
-				}
-				break;
-
-			case State::Equals:
-				return makeToken(":=");
 
 			case State::Punct:
 				return makeToken(buf.str());
@@ -105,6 +94,7 @@ public:
 			}
 			advance();
 		}
+		return makeToken(Token::InvalidToken);
 	}
 };
 
