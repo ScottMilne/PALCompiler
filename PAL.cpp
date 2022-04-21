@@ -23,19 +23,21 @@ int main(int argc, const char** argv) {
 	// Finally, we can instanciate our scanner and do whatever we need with it!
 
 	PALScanner scanner(input);
+	
+	
+	while (!scanner.end()) {
+		Token tok = scanner.lex();
+		std::cout << "Token: " << tok.type() << "\n";
+	}
+	 
 
 	PALParser parser(scanner);
 	
-	 parser.parse();
+	parser.parse();
+
 	for (const Error& error : parser.errors())
 	{
 		std::cout << error << "\n";
 	}
 	
-
-	while (!scanner.end()) {
-		Token tok = scanner.lex();
-		std::cout << "Token: " << tok.type() << "\n";
-	}
-
 }

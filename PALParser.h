@@ -1,124 +1,157 @@
 #include "CompilerKit/Parser.hpp"
+#include "CompilerKit/Sema.hpp"
+#include "PALSema.h"
 using namespace CompilerKit;
 
 class PALParser : public Parser {
 public:
-	PALParser(Scanner& scanner) : Parser(scanner) {}
+	PALParser(Scanner& scanner) :
+		Parser(scanner),
+		semantics(*this) {}
+
 private:
+	PALSema semantics;
+
 	void recStarter() override{
-
-		while (have("int") || have("real")) {
-			recDeclaration();
-		}
-
-		recBlock();
+		Scope::open();
+		expect("PROGRAM");
+		expect(Token::Identifier);
+		expect("WITH");
+		recVarDecls();
+		expect("IN");	
+		while (have(Token::Identifier) || have("UNTIL") || have("IF") || have("INPUT") || have(Token::Integer))
+		{
+			recStatement();
+		}	
+		expect("END");
+		Scope::close();
 	}
 
-	void recDeclaration() {
-		if (have("int"))
+	void recVarDecls() {
+
+		while (have(Token::Identifier))
 		{
-			expect("int");
+			recIdentList();
+			expect("AS");
+			recType();
+		}
+	}
+
+	void recType() {
+		if (have("REAL"))
+		{
+			expect("REAL");
+		}
+		else if (have("INTEGER")) {
+			expect("INTEGER");
 		}
 		else {
-			expect("real");
+			syntaxError("INTEGER or REAL");
 		}
-		expect(Token::Identifier);
+	}
 
-		while (match(","))
+	void recStatement() {
+		if (have(Token::Identifier))
 		{
-			expect(Token::Identifier);
+			recAssignment();
+		}
+		else if (have("UNTIL"))
+		{
+			recLoop();
+		}
+		else if (have("IF"))
+		{
+			recConditional();
+		}
+		else if (have("INPUT"))
+		{
+			recIO();
+		}
+		else
+		{
+			syntaxError("valid statement");
 		}
 
 	}
 
-	void recBlock() {
-		if (have("let")||have("for") || have("get") || have("put"))
+	void recAssignment() {
+		expect(Token::Identifier);
+		expect("=");
+		recExpression();
+	}
+
+	void recLoop() {
+		expect("UNTIL");
+		recBooleanExpr();
+		expect("REPEAT");
+
+		while (have(Token::Identifier)|| have("UNTIL")|| have("IF")|| have("INPUT"))
 		{
 			recStatement();
 		}
-		else 
+		expect("ENDLOOP");
+	}
+
+	void recConditional() {
+		expect("IF");
+		recBooleanExpr();
+		expect("THEN");
+
+		while (have(Token::Identifier) || have("UNTIL") || have("IF") || have("INPUT"))
 		{
-			expect("begin");
-			
-			while (have("let") || have("for") || have("get") || have("put"))
-			{
-				recStatement();
-			}
-
-			expect("end");
+			recStatement();
 		}
+
+
 	}
 
-	void recStatement()
-	{
-		if (have("let"))
-		{
-			recLetStatement();
-		}
-		else if ("for")
-		{
-			recForStatement();
-		}
+	void recIO() {
+
 	}
 
-	void recLetStatement() 
-	{
-		expect("let");
-		expect(Token::Identifier);
-		expect(":=");
-		recExpression();
-	}
-	void recForStatement() 
-	{
-		expect("for");
-		expect(Token::Identifier);
-		expect(":=");
-		recExpression();
-		expect("to");
-		recExpression();
-		expect("do");
-		recBlock();
-	}
-
-	void recExpression() 
-	{
+	void recExpression() {
 		recTerm();
 
-		while (have("+")||have("-"))
+		while (have("+") || have("-"))
 		{
-			if (have("+"))
-			{
-				expect("+");
-			}
-			else
-			{
-				expect("-");
-			}
 			recTerm();
 		}
 	}
 
-	void recTerm() 
-	{
+	void recTerm() {
 		recFactor();
-		
+
 		while (have("*") || have("/"))
 		{
-			if (have("*"))
-			{
-				expect("*");
-			}
-			else
-			{
-				expect("/");
-			}
-
 			recFactor();
 		}
 	}
 
-	void recFactor() 
-	{
+	void recFactor() {
+
+		if (have("+"))
+		{
+			expect("+");
+		}
+		else if (have("-"))
+		{
+			expect("-");
+		}
+
+		if (have(Token::Identifier)||have(Token::Integer) || have(Token::Real))
+		{
+			recValue();
+		}
+		else if (have("("))
+		{
+			expect("(");
+			recExpression();
+			expect(")");
+		}
+		
+	}
+
+	void recValue() {
 		if (have(Token::Identifier))
 		{
 			expect(Token::Identifier);
@@ -131,12 +164,34 @@ private:
 		{
 			expect(Token::Real);
 		}
-		else
+
+	}
+
+	void recBooleanExpr() {
+
+	}
+
+	void recIdentList() {
+		expect(Token::Identifier);
+
+		while (have(","))
 		{
-			expect("(");
-			recExpression();
-			expect(")");
+			expect(",");
+			expect(Token::Identifier);
 		}
 	}
+
+	void recDecl() {
+		Type type = Type::Invalid;
+		if (match("int")) {
+			type = Type::Integer;
+		}
+		else if (match("real")) {
+			type = Type::Real;
+		}
+		//sema.define(scanner().current(), type);
+		expect(Token::Identifier);
+	}
+
 
 };

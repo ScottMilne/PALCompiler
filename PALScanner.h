@@ -58,7 +58,6 @@ public:
 					{
 						if (str == keywords[i]) {
 							return makeToken(str);
-							break;
 						}
 					}
 					return makeToken(Token::Identifier, str);
@@ -78,7 +77,16 @@ public:
 				}
 				break;
 
-			case State::Punct:
+			case State::Real:     // Real
+				if (std::isdigit(peek())) {
+					state = State::Real;
+				}
+				else {
+					return makeToken(Token::Real, buf.str());
+				}
+				break;
+
+			case State::Punct:			// punctuation
 				return makeToken(buf.str());
 
 			case State::EndOfFile:     // end-of-file
