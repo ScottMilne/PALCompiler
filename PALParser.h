@@ -2,16 +2,19 @@
 #include "CompilerKit/Sema.hpp"
 #include "PALSema.h"
 using namespace CompilerKit;
+#include <string>
+#include <iostream>
 
 class PALParser : public Parser {
 public:
-	PALParser(Scanner& scanner) :
-		Parser(scanner),
-		semantics(*this) {}
+	PALParser(Scanner& scanner) : 
+		Parser(scanner)
+		,semantics(*this) {}
 
 private:
 	PALSema semantics;
-
+	std::vector<Token> tokenVector;
+	
 	void recStarter() override{
 		Scope::open();
 		expect("PROGRAM");
@@ -19,7 +22,7 @@ private:
 		expect("WITH");
 		recVarDecls();
 		expect("IN");	
-		while (have(Token::Identifier) || have("UNTIL") || have("IF") || have("INPUT") || have(Token::Integer))
+		while (statementCheck())
 		{
 			recStatement();
 		}	
@@ -27,29 +30,45 @@ private:
 		Scope::close();
 	}
 
+	
+	// <VarDecls> ::= (<IdentList> AS <Type>)* ;
 	void recVarDecls() {
-
+		Type type;
 		while (have(Token::Identifier))
 		{
-			recIdentList();
+			tokenVector = recIdentList();
 			expect("AS");
-			recType();
+			type = recType();
+
+			//traverse vector
+			for (Token t : tokenVector)
+			{
+				semantics.declareVar(t, type);
+			}
+			
 		}
 	}
 
-	void recType() {
+	// <Type> ::= REAL | INTEGER ;
+	Type recType() {
 		if (have("REAL"))
 		{
 			expect("REAL");
+			return Type::Real;
 		}
 		else if (have("INTEGER")) {
 			expect("INTEGER");
+			return Type::Integer;
 		}
 		else {
 			syntaxError("INTEGER or REAL");
+			
 		}
+
+
 	}
 
+	// <Statement> ::= <Assignment> | <Loop> | <Conditional> | <I-o> ;
 	void recStatement() {
 		if (have(Token::Identifier))
 		{
@@ -63,7 +82,7 @@ private:
 		{
 			recConditional();
 		}
-		else if (have("INPUT"))
+		else if (have("INPUT")||have("OUTPUT"))
 		{
 			recIO();
 		}
@@ -74,60 +93,123 @@ private:
 
 	}
 
+	// <Assignment> ::= Identifier = <Expression> ;
 	void recAssignment() {
+		Token varToken = current();
 		expect(Token::Identifier);
 		expect("=");
-		recExpression();
+		Type exType = recExpression();
+		semantics.checkAssignment(varToken, exType);
 	}
 
+	// <Loop> ::= UNTIL <BooleanExpr> REPEAT (<Statement>)* ENDLOOP ;
 	void recLoop() {
 		expect("UNTIL");
 		recBooleanExpr();
 		expect("REPEAT");
 
-		while (have(Token::Identifier)|| have("UNTIL")|| have("IF")|| have("INPUT"))
+		while (statementCheck())
 		{
 			recStatement();
 		}
 		expect("ENDLOOP");
 	}
 
+
+	/*
+	* <Conditional> ::= IF <BooleanExpr> THEN (<Statement>)*
+                      ( ELSE (<Statement>)* )? 
+                      ENDIF ;
+	*/
 	void recConditional() {
 		expect("IF");
 		recBooleanExpr();
 		expect("THEN");
 
-		while (have(Token::Identifier) || have("UNTIL") || have("IF") || have("INPUT"))
+		while (statementCheck())
 		{
 			recStatement();
 		}
-
+		if (match("ELSE"))
+		{
+			while (statementCheck())
+			{
+				recStatement();
+			}
+		}
+		expect("ENDIF");
 
 	}
 
+
+	/*
+	* <I-o> ::= INPUT <IdentList> | 
+          OUTPUT <Expression> ( , <Expression>)* ;
+	*/
 	void recIO() {
+		if (have("INPUT"))
+		{
+			expect("INPUT");
+			recIdentList();
+		}
+		else if (have("OUTPUT"))
+		{
+			expect("OUTPUT");
+			recExpression();
 
+			while (match(","))
+			{
+				recExpression();
+			}
+		}
 	}
 
-	void recExpression() {
-		recTerm();
+	// <Expression> ::= <Term> ( (+|-) <Term>)* ;
+	Type recExpression() {
+		Type leftType = recTerm();
 
+		Token op = current();
 		while (have("+") || have("-"))
 		{
-			recTerm();
+			if (match("+")) {
+
+			}
+			else if (match("-")) {
+
+			}
+			Type rightType = recTerm();
+			//checking both term values match
+			leftType = semantics.checkExpression(op, leftType,  rightType);
+
+			op = current();
 		}
+		return leftType;
 	}
 
-	void recTerm() {
-		recFactor();
-
+	// <Term> ::= <Factor> ( (*|/) <Factor>)* ;
+	Type recTerm() {
+		Type leftType = recFactor();
+		Token op = current();
 		while (have("*") || have("/"))
 		{
-			recFactor();
+			if (match("*")) {
+
+			}
+			else if (match("/")) {
+
+			}
+			Type rightType = recFactor();
+			
+			//checking both factor values match
+			leftType = semantics.checkExpression(op, leftType, rightType);
+
+			op = current();
 		}
+		return leftType;
 	}
 
-	void recFactor() {
+	// <Factor> ::= (+|-)? ( <Value> | "(" <Expression> ")" ) ;
+	Type recFactor() {
 
 		if (have("+"))
 		{
@@ -138,60 +220,93 @@ private:
 			expect("-");
 		}
 
+		Type type;
+
 		if (have(Token::Identifier)||have(Token::Integer) || have(Token::Real))
 		{
-			recValue();
+			type = recValue();
 		}
 		else if (have("("))
 		{
 			expect("(");
-			recExpression();
+			type = recExpression();
 			expect(")");
 		}
-		
+		else {
+			syntaxError("Valid Statement");
+		}
+		return type;
 	}
 
-	void recValue() {
+	// <Value> ::= Identifier | IntegerValue | RealValue ;
+	Type recValue() {
+		Type type;
 		if (have(Token::Identifier))
 		{
+			type = semantics.checkID(current());
 			expect(Token::Identifier);
 		}
 		else if (have(Token::Integer))
 		{
 			expect(Token::Integer);
+			type = Type::Integer;
 		}
 		else if (have(Token::Real))
 		{
 			expect(Token::Real);
+			type = Type::Real;
 		}
+		else
+		{
+			syntaxError("Identifier or Integer or Real");
+		}
+		return type;
 
 	}
 
+	// <BooleanExpr> ::= <Expression> ("<" | "=" | ">") <Expression> ;
 	void recBooleanExpr() {
+		Type leftType = recExpression();
+		Token op = current();
+		if (have("<"))
+		{
+			expect("<");
+		}
+		else if (have("="))
+		{
+			expect("=");
+		}
+		else if (have(">"))
+		{
+			expect(">");
+		}
+		Type rightType = recExpression();
 
+		semantics.checkExpression(op, leftType, rightType);
 	}
 
-	void recIdentList() {
+	// <IdentList> ::= Identifier ( , Identifier)* ;
+	std::vector<Token> recIdentList() {
+		std::vector<Token> tokens;
+		tokens.push_back(current());
 		expect(Token::Identifier);
-
 		while (have(","))
 		{
 			expect(",");
+			tokens.push_back(current());
 			expect(Token::Identifier);
 		}
+		return tokens;
 	}
 
-	void recDecl() {
-		Type type = Type::Invalid;
-		if (match("int")) {
-			type = Type::Integer;
+	bool statementCheck() {
+		if (have(Token::Identifier) || have("UNTIL") || have("IF") || have("INPUT") || have("OUTPUT"))
+		{
+			return true;
 		}
-		else if (match("real")) {
-			type = Type::Real;
+		else {
+			return false;
 		}
-		//sema.define(scanner().current(), type);
-		expect(Token::Identifier);
 	}
-
 
 };

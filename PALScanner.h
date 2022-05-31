@@ -42,8 +42,8 @@ public:
 					updateTokenStart();
 					if (std::isalpha(peek()))				state = State::Identifier;
 					else if (std::isdigit(peek()))			state = State::Integer;
-					else if (strchr("+-*/(),=<>", peek()))	state = State::Punct;
 					else if (peek() == '\0')				state = State::EndOfFile;
+					else if (strchr("+-*/(),=<>", peek()))	state = State::Punct;
 					else									state = State::InvalidChar;
 				}
 				break;
