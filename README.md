@@ -1,7 +1,65 @@
-# PALCompiler
-Compiler for PAL (Pretty Awful Language)
+<div id="top"></div>
 
-Uses [CompilerKit](https://amyparent.com/CompilerKit/) for recursive descent parsing
+
+<!-- PROJECT LOGO -->
+<br />
+<div align="center">
+  <img src="imgs/compile.png" alt="Logo" width="120" height="80">
+
+  <h1 align="center">PAL Compiler</h1>
+
+  <h3 align="center">
+    Compiler for the Pretty Awful Language
+  </h3>
+</div>
+
+
+
+<!-- TABLE OF CONTENTS -->
+<details>
+  <summary>Table of Contents</summary>
+  <ol>
+    <li>
+      <a href="#about-the-project">About The Project</a>
+      <ul>
+        <li><a href="#built-with">Built With</a></li>
+      </ul>
+    </li>
+    <li><a href="#license">License</a></li>
+    <li><a href="#acknowledgments">Acknowledgments</a></li>
+  </ol>
+</details>
+
+
+
+<!-- ABOUT THE PROJECT -->
+## About The Project
+
+
+The compiler was built with C++ using the CompilerKit for recursive descent parsing. The project takes in a text file and goes through three stages to ensure its conforming with PAL
+
+<img src="imgs/CompileFlow.png" alt="ProjectHead" width="350" height="350">
+
+
+
+
+### Built With
+
+* [C++](https://cplusplus.com/)
+
+
+<!-- LICENSE -->
+## License
+
+Distributed under the MIT License.
+
+
+
+<!-- ACKNOWLEDGMENTS -->
+## Acknowledgments
+
+*  [CompilerKit](https://amyparent.com/CompilerKit/)
+
 
 ## PAL EBNF
 
@@ -46,3 +104,5 @@ Identifier   <|[a-zA-Z]\w*
 RealValue    <|\d+\.\d*
 IntegerValue <|\d+
 ```
+
+<p align="right">(<a href="#top">back to top</a>)</p>
